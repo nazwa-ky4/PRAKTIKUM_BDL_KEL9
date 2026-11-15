@@ -10,3 +10,6 @@ $routes->post('produk/store', 'ProdukController::store');
 $routes->get('produk/edit/(:segment)', 'ProdukController::edit/$1');
 $routes->post('produk/update/(:segment)', 'ProdukController::update/$1');
 $routes->get('produk/delete/(:segment)', 'ProdukController::delete/$1');
+$routes->get('laporan/penjualan', 'LaporanController::penjualan');
+$routes->get('laporan/pelanggan', 'LaporanController::pelanggan');
+$routes->get('laporan/produk',    'LaporanController::produk');

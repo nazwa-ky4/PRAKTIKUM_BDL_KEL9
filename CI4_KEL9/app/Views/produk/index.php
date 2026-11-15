@@ -29,7 +29,7 @@
         <?php endif; ?>
 
         <a href="/produk/create" class="btn btn-primary">+ Tambah Produk Baru</a>
-        
+        <a href="/laporan/penjualan" class="btn btn-primary" style="background:#6c757d;">Laporan</a>
         <form action="" method="get" style="margin-top: 15px;">
             <input type="text" name="keyword" value="<?= esc($keyword ?? '') ?>" placeholder="Cari nama produk...">
             <button type="submit" class="btn btn-primary">Cari</button>
