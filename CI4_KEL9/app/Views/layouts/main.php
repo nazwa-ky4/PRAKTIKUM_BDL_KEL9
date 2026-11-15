@@ -21,8 +21,23 @@
         <a href="/laporan/penjualan">Transaksi Penjualan</a>
         <a href="/laporan/pelanggan">Rekap Pelanggan</a>
         <a href="/laporan/produk">Rekap Produk</a>
+        <a href="/transaksi/tambah">Input Transaksi</a>
     </nav>
     <div class="container">
+        <?php if (session()->getFlashdata('pesan')): ?>
+            <div style="background:#d4edda;color:#155724;padding:10px;margin-bottom:10px;border-radius:4px;"><?= esc(session()->getFlashdata('pesan')) ?></div>
+        <?php endif; ?>
+        <?php if (session()->getFlashdata('galat')): ?>
+            <div style="background:#f8d7da;color:#721c24;padding:10px;margin-bottom:10px;border-radius:4px;"><?= esc(session()->getFlashdata('galat')) ?></div>
+        <?php endif; ?>
+        <?php if (session()->getFlashdata('errors')): ?>
+            <div style="background:#f8d7da;color:#721c24;padding:10px;margin-bottom:10px;border-radius:4px;">
+                <?php foreach (session()->getFlashdata('errors') as $e): ?>
+                    <div><?= esc($e) ?></div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
         <?= $this->renderSection('content') ?>
     </div>
 </body>
