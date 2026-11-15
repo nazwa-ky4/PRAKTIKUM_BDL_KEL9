@@ -3,82 +3,120 @@
 namespace App\Controllers;
 
 use App\Models\ProdukModel;
+use CodeIgniter\Database\Exceptions\DatabaseException;
 
 class ProdukController extends BaseController
 {
-    protected $produkModel;
+    protected ProdukModel $produkModel;
 
     public function __construct()
     {
         $this->produkModel = new ProdukModel();
     }
 
-    // 1. Menampilkan daftar produk & pencarian
-    public function index()
+    // Aturan validasi dipakai bersama oleh store() dan update()
+    private function rules(bool $untukTambah): array
     {
-        $keyword = $this->request->getVar('keyword');
-        
-        if ($keyword) {
-            $produk = $this->produkModel->cariProduk($keyword)->findAll();
-        } else {
-            $produk = $this->produkModel->findAll();
-        }
-
-        $data = [
-            'title' => 'Data Produk (CodeIgniter 4)',
-            'produk' => $produk,
-            'keyword' => $keyword
+        $rules = [
+            'nama_produk' => 'required|max_length[100]',
+            'satuan'      => 'required|max_length[20]',
+            'harga_jual'  => 'required|numeric|greater_than_equal_to[0]',
+            'harga_beli'  => 'required|numeric|greater_than_equal_to[0]',
+            'stok'        => 'required|integer|greater_than_equal_to[0]',
         ];
 
-        return view('produk/index', $data);
+        if ($untukTambah) {
+            $rules['kode_produk'] = 'required|max_length[10]|is_unique[produk.kode_produk]';
+        }
+
+        return $rules;
     }
 
-    // 2. Form Tambah Produk
+    // Tampil + cari
+    public function index()
+    {
+        $keyword = $this->request->getGet('keyword');
+        $produk = $this->produkModel
+            ->cariProduk($keyword)
+            ->orderBy('kode_produk', 'ASC')
+            ->findAll();
+
+        return view('produk/index', [
+            'title'   => 'Data Produk (CodeIgniter 4)',
+            'produk'  => $produk,
+            'keyword' => $keyword,
+        ]);
+    }
+
+    // Form tambah
     public function create()
     {
-        return view('produk/tambah');
+        return view('produk/tambah', ['title' => 'Tambah Produk']);
     }
 
-    // Proses Simpan Data Tambahan
+    // Simpan produk baru
     public function store()
     {
-        $this->produkModel->save([
-            'kode_produk' => $this->request->getVar('kode_produk'),
-            'nama_produk' => $this->request->getVar('nama_produk'),
-            'harga_jual'  => $this->request->getVar('harga_jual'),
-            'stok'        => $this->request->getVar('stok'),
+        if (! $this->validate($this->rules(true))) {
+            return redirect()->back()->withInput()
+                ->with('errors', $this->validator->getErrors());
+        }
+
+        $this->produkModel->insert([
+            'kode_produk' => trim($this->request->getPost('kode_produk')),
+            'nama_produk' => trim($this->request->getPost('nama_produk')),
+            'satuan'      => trim($this->request->getPost('satuan')),
+            'harga_jual'  => $this->request->getPost('harga_jual'),
+            'harga_beli'  => $this->request->getPost('harga_beli'),
+            'stok'        => $this->request->getPost('stok'),
+            'deskripsi'   => trim($this->request->getPost('deskripsi') ?? ''),
         ]);
 
         return redirect()->to('/produk')->with('pesan', 'Data produk berhasil ditambahkan.');
     }
 
-    // 3. Form Edit Produk
+    // Form edit
     public function edit($id)
     {
-        $data = [
-            'title' => 'Edit Produk',
-            'produk' => $this->produkModel->find($id)
-        ];
+        $produk = $this->produkModel->find($id);
 
-        return view('produk/edit', $data);
+        if (! $produk) {
+            return redirect()->to('/produk')->with('galat', 'Produk tidak ditemukan.');
+        }
+
+        return view('produk/edit', ['title' => 'Edit Produk', 'produk' => $produk]);
     }
 
-    // Proses Update Data
+    // Simpan perubahan
     public function update($id)
     {
+        if (! $this->validate($this->rules(false))) {
+            return redirect()->back()->withInput()
+                ->with('errors', $this->validator->getErrors());
+        }
+
         $this->produkModel->update($id, [
-            'nama_produk' => $this->request->getVar('nama_produk'),
-            'harga_jual'  => $this->request->getVar('harga_jual'),
-            'stok'        => $this->request->getVar('stok'),
+            'nama_produk' => trim($this->request->getPost('nama_produk')),
+            'satuan'      => trim($this->request->getPost('satuan')),
+            'harga_jual'  => $this->request->getPost('harga_jual'),
+            'harga_beli'  => $this->request->getPost('harga_beli'),
+            'stok'        => $this->request->getPost('stok'),
+            'deskripsi'   => trim($this->request->getPost('deskripsi') ?? ''),
         ]);
 
         return redirect()->to('/produk')->with('pesan', 'Data produk berhasil diperbarui.');
     }
 
-    // 4. Hapus Produk
+    // Hapus produk
     public function delete($id)
     {
-        $this->produkModel->delete($id);
-        return redirect()->to('/produk')->with('pesan', 'Data produk berhasil dihapus.');
+        try {
+            $this->produkModel->delete($id);
+            return redirect()->to('/produk')->with('pesan', 'Data produk berhasil dihapus.');
+        } catch (DatabaseException $e) {
+            // Terjadi jika produk sudah dipakai di detil_penjualan / detil_pembelian
+            return redirect()->to('/produk')
+                ->with('galat', 'Gagal menghapus: produk sedang dipakai dalam transaksi.');
+        }
     }
 }
