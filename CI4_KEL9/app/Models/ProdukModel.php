@@ -8,14 +8,19 @@ class ProdukModel extends Model
 {
     protected $table            = 'produk';
     protected $primaryKey       = 'kode_produk';
-    protected $allowedFields    = ['kode_produk', 'nama_produk', 'harga_jual', 'stok'];
     protected $useAutoIncrement = false;
+    protected $returnType       = 'array';
+    protected $allowedFields    = [
+        'kode_produk', 'nama_produk', 'satuan',
+        'harga_jual', 'harga_beli', 'stok', 'deskripsi',
+    ];
 
-    // Fungsi pencarian produk berdasarkan nama
-    public function cariProduk($keyword = null)
+    // Pencarian nama produk. Parameter terakhir (true) membuat pencarian
+    // tidak case-sensitive, sama seperti ILIKE di PHP Native.
+    public function cariProduk(?string $keyword = null)
     {
         if ($keyword) {
-            return $this->like('nama_produk', $keyword);
+            return $this->like('nama_produk', $keyword, 'both', null, true);
         }
         return $this;
     }
