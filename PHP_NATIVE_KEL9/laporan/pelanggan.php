@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../koneksi.php';
+
 try {
     $sql = "SELECT c.kode_pelanggan, c.nama_pelanggan,
                    COUNT(p.no_penjualan) AS jumlah_transaksi,
@@ -17,28 +18,29 @@ try {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Rekap Pelanggan - PHP Native</title>
+    <title>Rekap Penjualan per Pelanggan (Agregasi)</title>
 </head>
 <body>
 <?php require __DIR__ . '/../menu.php'; ?>
-<div class="container">
-    <h2>Rekap Penjualan per Pelanggan (Agregasi) - PHP Native</h2>
-    <p>Jumlah transaksi (<code>COUNT</code>) dan total penjualan (<code>SUM</code>) per pelanggan, memakai <code>GROUP BY</code>.</p>
-    <table>
-        <thead>
-            <tr><th>Kode</th><th>Nama Pelanggan</th><th>Jumlah Transaksi</th><th>Total Penjualan (Rp)</th></tr>
-        </thead>
-        <tbody>
-        <?php foreach ($rows as $r): ?>
-            <tr>
-                <td><?= htmlspecialchars($r['kode_pelanggan']) ?></td>
-                <td><?= htmlspecialchars($r['nama_pelanggan']) ?></td>
-                <td class="angka"><?= htmlspecialchars($r['jumlah_transaksi']) ?></td>
-                <td class="angka">Rp <?= number_format($r['total_penjualan'], 0, ',', '.') ?></td>
-            </tr>
-        <?php endforeach; ?>
-        </tbody>
-    </table>
-</div>
+
+<h2>Rekap Penjualan per Pelanggan (Agregasi)</h2>
+<p>Jumlah transaksi (COUNT) dan total penjualan (SUM) per pelanggan, memakai GROUP BY.</p>
+
+<table border="1" cellpadding="6" cellspacing="0">
+    <thead>
+        <tr><th>Kode</th><th>Nama Pelanggan</th><th>Jumlah Transaksi</th><th>Total Penjualan (Rp)</th></tr>
+    </thead>
+    <tbody>
+    <?php foreach ($rows as $r): ?>
+        <tr>
+            <td><?= htmlspecialchars($r['kode_pelanggan']) ?></td>
+            <td><?= htmlspecialchars($r['nama_pelanggan']) ?></td>
+            <td><?= htmlspecialchars($r['jumlah_transaksi']) ?></td>
+            <td>Rp <?= number_format($r['total_penjualan'], 0, ',', '.') ?></td>
+        </tr>
+    <?php endforeach; ?>
+    </tbody>
+</table>
+
 </body>
 </html>

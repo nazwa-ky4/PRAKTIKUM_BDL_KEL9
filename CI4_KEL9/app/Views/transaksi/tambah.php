@@ -1,19 +1,16 @@
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
+
 <h2><?= esc($title) ?></h2>
 <p>Satu header penjualan dan minimal dua baris detail disimpan dalam satu transaksi database.</p>
+
 <form action="/transaksi/simpan" method="post">
     <?= csrf_field() ?>
-    <p>
-        <label>No. Penjualan (maks. 15 karakter):</label><br>
-        <input type="text" name="no_penjualan" value="<?= old('no_penjualan') ?>">
-    </p>
-    <p>
-        <label>Tanggal Penjualan:</label><br>
-        <input type="date" name="tgl_penjualan" value="<?= old('tgl_penjualan', date('Y-m-d')) ?>">
-    </p>
-    <p>
-        <label>Pelanggan:</label><br>
+    <p><label>No. Penjualan (maks. 15 karakter):</label><br>
+        <input type="text" name="no_penjualan" value="<?= old('no_penjualan') ?>"></p>
+    <p><label>Tanggal Penjualan:</label><br>
+        <input type="date" name="tgl_penjualan" value="<?= old('tgl_penjualan', date('Y-m-d')) ?>"></p>
+    <p><label>Pelanggan:</label><br>
         <select name="kode_pelanggan">
             <option value="">-- Pilih Pelanggan --</option>
             <?php foreach ($pelanggan as $pl): ?>
@@ -21,19 +18,19 @@
                     <?= esc($pl['nama_pelanggan']) ?>
                 </option>
             <?php endforeach; ?>
-        </select>
-    </p>
-    <p>
-        <label>Keterangan:</label><br>
-        <input type="text" name="keterangan" value="<?= old('keterangan') ?>">
-    </p>
+        </select></p>
+    <p><label>Keterangan:</label><br>
+        <input type="text" name="keterangan" value="<?= old('keterangan') ?>"></p>
+
     <h4>Detail Penjualan (isi minimal 2 baris)</h4>
+
     <datalist id="daftar-produk">
         <?php foreach ($produk as $pr): ?>
             <option value="<?= esc($pr['kode_produk']) ?>"><?= esc($pr['nama_produk']) ?></option>
         <?php endforeach; ?>
     </datalist>
-    <table>
+
+    <table border="1" cellpadding="6" cellspacing="0">
         <thead>
             <tr><th>No</th><th>Kode Produk</th><th>Jumlah</th><th>Harga (Rp)</th></tr>
         </thead>
@@ -48,6 +45,8 @@
         <?php endfor; ?>
         </tbody>
     </table>
-    <p><button type="submit" class="btn">Simpan Transaksi</button></p>
+
+    <p><button type="submit">Simpan Transaksi</button></p>
 </form>
+
 <?= $this->endSection() ?>

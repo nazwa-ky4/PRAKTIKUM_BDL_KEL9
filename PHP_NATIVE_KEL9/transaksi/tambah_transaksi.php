@@ -1,10 +1,12 @@
 <?php
 require_once __DIR__ . '/../koneksi.php';
+
 function h($teks) { return htmlspecialchars((string) $teks); }
 function lama($nama, $default = '') { return h($_POST[$nama] ?? $default); }
 function lamaDetail($i, $kolom) { return h($_POST['detail'][$i][$kolom] ?? ''); }
 
 $error = '';
+
 // Data referensi untuk pilihan di form
 try {
     $list_pelanggan = $pdo->query("SELECT * FROM pelanggan ORDER BY nama_pelanggan ASC")->fetchAll(PDO::FETCH_ASSOC);
@@ -22,19 +24,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Kumpulkan baris detail (baris kosong dilewati)
     $detail = [];
     $total  = 0;
+
     foreach (($_POST['detail'] ?? []) as $b) {
         $kode   = trim($b['kode_produk'] ?? '');
         $jumlah = trim($b['jumlah'] ?? '');
         $harga  = trim($b['harga'] ?? '');
-        
+
         if ($kode === '' && $jumlah === '' && $harga === '') {
             continue;
         }
-        if ($kode === '' || !ctype_digit($jumlah) || (int) $jumlah <= 0 || !is_numeric($harga) || (float) $harga < 0) {
+        if ($kode === '' || !ctype_digit($jumlah) || (int) $jumlah <= 0
+            || !is_numeric($harga) || (float) $harga < 0) {
             $error = "Setiap baris detail harus berisi kode produk, jumlah (> 0), dan harga (>= 0).";
             break;
         }
-        
+
         $subtotal = (int) $jumlah * (float) $harga;
         $total   += $subtotal;
         $detail[] = [
@@ -82,8 +86,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // 4. Semua berhasil -> COMMIT
             $pdo->commit();
+
             header("Location: ../laporan/penjualan.php?sukses=" . urlencode($no_penjualan));
             exit;
+
         } catch (Exception $e) {
             // 5. Ada yang gagal -> ROLLBACK
             if ($pdo->inTransaction()) {
@@ -98,64 +104,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Input Transaksi Penjualan - PHP Native</title>
+    <title>Input Transaksi Penjualan</title>
 </head>
 <body>
 <?php require __DIR__ . '/../menu.php'; ?>
-<div class="container">
-    <h2>Input Transaksi Penjualan - PHP Native</h2>
-    <p>Satu header penjualan dan minimal dua baris detail disimpan dalam satu transaksi database.</p>
-    <?php if ($error !== ''): ?>
-        <div class="galat"><?= h($error) ?></div>
-    <?php endif; ?>
-    <form action="" method="POST">
-        <p>
-            <label>No. Penjualan (maks. 15 karakter):</label><br>
-            <input type="text" name="no_penjualan" value="<?= lama('no_penjualan') ?>">
-        </p>
-        <p>
-            <label>Tanggal Penjualan:</label><br>
-            <input type="date" name="tgl_penjualan" value="<?= lama('tgl_penjualan', date('Y-m-d')) ?>">
-        </p>
-        <p>
-            <label>Pelanggan:</label><br>
-            <select name="kode_pelanggan">
-                <option value="">-- Pilih Pelanggan --</option>
-                <?php foreach ($list_pelanggan as $pl): ?>
-                    <option value="<?= h($pl['kode_pelanggan']) ?>" <?= (($_POST['kode_pelanggan'] ?? '') === $pl['kode_pelanggan']) ? 'selected' : '' ?>>
-                        <?= h($pl['nama_pelanggan']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </p>
-        <p>
-            <label>Keterangan:</label><br>
-            <input type="text" name="keterangan" value="<?= lama('keterangan') ?>">
-        </p>
-        
-        <h4>Detail Penjualan (isi minimal 2 baris)</h4>
-        <datalist id="daftar-produk">
-            <?php foreach ($list_produk as $pr): ?>
-                <option value="<?= h($pr['kode_produk']) ?>"><?= h($pr['nama_produk']) ?></option>
+
+<h2>Input Transaksi Penjualan</h2>
+<p>Satu header penjualan dan minimal dua baris detail disimpan dalam satu transaksi database.</p>
+
+<?php if ($error !== ''): ?>
+    <p><strong>[GAGAL]</strong> <?= h($error) ?></p>
+<?php endif; ?>
+
+<form action="" method="POST">
+    <p><label>No. Penjualan (maks. 15 karakter):</label><br>
+        <input type="text" name="no_penjualan" value="<?= lama('no_penjualan') ?>"></p>
+    <p><label>Tanggal Penjualan:</label><br>
+        <input type="date" name="tgl_penjualan" value="<?= lama('tgl_penjualan', date('Y-m-d')) ?>"></p>
+    <p><label>Pelanggan:</label><br>
+        <select name="kode_pelanggan">
+            <option value="">-- Pilih Pelanggan --</option>
+            <?php foreach ($list_pelanggan as $pl): ?>
+                <option value="<?= h($pl['kode_pelanggan']) ?>" <?= (($_POST['kode_pelanggan'] ?? '') === $pl['kode_pelanggan']) ? 'selected' : '' ?>>
+                    <?= h($pl['nama_pelanggan']) ?>
+                </option>
             <?php endforeach; ?>
-        </datalist>
-        <table>
-            <thead>
-                <tr><th>No</th><th>Kode Produk</th><th>Jumlah</th><th>Harga (Rp)</th></tr>
-            </thead>
-            <tbody>
-            <?php for ($i = 0; $i < 3; $i++): ?>
-                <tr>
-                    <td><?= $i + 1 ?></td>
-                    <td><input type="text" name="detail[<?= $i ?>][kode_produk]" list="daftar-produk" value="<?= lamaDetail($i, 'kode_produk') ?>"></td>
-                    <td><input type="number" name="detail[<?= $i ?>][jumlah]" min="1" value="<?= lamaDetail($i, 'jumlah') ?>"></td>
-                    <td><input type="number" name="detail[<?= $i ?>][harga]" min="0" step="0.01" value="<?= lamaDetail($i, 'harga') ?>"></td>
-                </tr>
-            <?php endfor; ?>
-            </tbody>
-        </table>
-        <p><button type="submit">Proses Transaksi</button></p>
-    </form>
-</div>
+        </select></p>
+    <p><label>Keterangan:</label><br>
+        <input type="text" name="keterangan" value="<?= lama('keterangan') ?>"></p>
+
+    <h4>Detail Penjualan (isi minimal 2 baris)</h4>
+
+    <datalist id="daftar-produk">
+        <?php foreach ($list_produk as $pr): ?>
+            <option value="<?= h($pr['kode_produk']) ?>"><?= h($pr['nama_produk']) ?></option>
+        <?php endforeach; ?>
+    </datalist>
+
+    <table border="1" cellpadding="6" cellspacing="0">
+        <thead>
+            <tr><th>No</th><th>Kode Produk</th><th>Jumlah</th><th>Harga (Rp)</th></tr>
+        </thead>
+        <tbody>
+        <?php for ($i = 0; $i < 3; $i++): ?>
+            <tr>
+                <td><?= $i + 1 ?></td>
+                <td><input type="text" name="detail[<?= $i ?>][kode_produk]" list="daftar-produk" value="<?= lamaDetail($i, 'kode_produk') ?>"></td>
+                <td><input type="number" name="detail[<?= $i ?>][jumlah]" min="1" value="<?= lamaDetail($i, 'jumlah') ?>"></td>
+                <td><input type="number" name="detail[<?= $i ?>][harga]" min="0" step="0.01" value="<?= lamaDetail($i, 'harga') ?>"></td>
+            </tr>
+        <?php endfor; ?>
+        </tbody>
+    </table>
+
+    <p><button type="submit">Proses Transaksi</button></p>
+</form>
+
 </body>
 </html>
