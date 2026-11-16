@@ -1,156 +1,164 @@
 <?php
-require_once '../koneksi.php';
+require_once __DIR__ . '/../koneksi.php';
+
+function h($teks) { return htmlspecialchars((string) $teks); }
+function lama($nama, $default = '') { return h($_POST[$nama] ?? $default); }
+function lamaDetail($i, $kolom) { return h($_POST['detail'][$i][$kolom] ?? ''); }
 
 $error = '';
-$sukses = '';
 
-// Ambil data produk dan pelanggan untuk pilihan di form
+// Data referensi untuk pilihan di form
 try {
-    $stmtProduk = $pdo->query("SELECT * FROM produk WHERE stok > 0 ORDER BY nama_produk ASC");
-    $list_produk = $stmtProduk->fetchAll(PDO::FETCH_ASSOC);
-
-    $stmtPelanggan = $pdo->query("SELECT * FROM pelanggan ORDER BY nama_pelanggan ASC");
-    $list_pelanggan = $stmtPelanggan->fetchAll(PDO::FETCH_ASSOC);
+    $list_pelanggan = $pdo->query("SELECT * FROM pelanggan ORDER BY nama_pelanggan ASC")->fetchAll(PDO::FETCH_ASSOC);
+    $list_produk    = $pdo->query("SELECT * FROM produk ORDER BY kode_produk ASC")->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     die("Gagal memuat data referensi: " . $e->getMessage());
 }
 
-// Proses ketika form transaksi disubmit
-if (isset($_POST['simpan_transaksi'])) {
-    $no_penjualan    = trim($_POST['no_penjualan']);
-    $tgl_penjualan   = trim($_POST['tgl_penjualan']);
-    $kode_pelanggan  = trim($_POST['kode_pelanggan']);
-    $kode_produk     = trim($_POST['kode_produk']);
-    $jumlah          = (int)$_POST['jumlah'];
-    $keterangan      = trim($_POST['keterangan']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $no_penjualan   = trim($_POST['no_penjualan'] ?? '');
+    $tgl_penjualan  = trim($_POST['tgl_penjualan'] ?? '');
+    $kode_pelanggan = trim($_POST['kode_pelanggan'] ?? '');
+    $keterangan     = trim($_POST['keterangan'] ?? '');
 
-    if ($no_penjualan === '' || $tgl_penjualan === '' || $kode_pelanggan === '' || $kode_produk === '' || $jumlah <= 0) {
-        $error = "Semua kolom wajib diisi dengan benar!";
-    } else {
+    // Kumpulkan baris detail (baris kosong dilewati)
+    $detail = [];
+    $total  = 0;
+
+    foreach (($_POST['detail'] ?? []) as $b) {
+        $kode   = trim($b['kode_produk'] ?? '');
+        $jumlah = trim($b['jumlah'] ?? '');
+        $harga  = trim($b['harga'] ?? '');
+
+        if ($kode === '' && $jumlah === '' && $harga === '') {
+            continue;
+        }
+        if ($kode === '' || !ctype_digit($jumlah) || (int) $jumlah <= 0
+            || !is_numeric($harga) || (float) $harga < 0) {
+            $error = "Setiap baris detail harus berisi kode produk, jumlah (> 0), dan harga (>= 0).";
+            break;
+        }
+
+        $subtotal = (int) $jumlah * (float) $harga;
+        $total   += $subtotal;
+        $detail[] = [
+            'kode_produk' => $kode,
+            'jumlah'      => (int) $jumlah,
+            'harga'       => (float) $harga,
+            'subtotal'    => $subtotal,
+        ];
+    }
+
+    // Validasi header dan jumlah detail
+    if ($error === '') {
+        if ($no_penjualan === '' || $tgl_penjualan === '' || $kode_pelanggan === '') {
+            $error = "No. penjualan, tanggal, dan pelanggan wajib diisi.";
+        } elseif (strlen($no_penjualan) > 15) {
+            $error = "No. penjualan maksimal 15 karakter.";
+        } elseif (count($detail) < 2) {
+            $error = "Transaksi harus memiliki minimal dua baris detail.";
+        }
+    }
+
+    // Simpan dalam satu transaksi database
+    if ($error === '') {
         try {
-            // 1. MULAI TRANSAKSI DATABASE
+            // 1. Mulai transaksi
             $pdo->beginTransaction();
 
-            // A. Ambil harga produk saat ini untuk disimpan ke detil penjualan
-            $stmtP = $pdo->prepare("SELECT harga_jual, stok FROM produk WHERE kode_produk = ?");
-            $stmtP->execute([$kode_produk]);
-            $prod = $stmtP->fetch(PDO::FETCH_ASSOC);
+            // 2. Simpan header penjualan
+            $stmtHeader = $pdo->prepare(
+                "INSERT INTO penjualan (no_penjualan, tgl_penjualan, kode_pelanggan, total, keterangan)
+                 VALUES (?, ?, ?, ?, ?)"
+            );
+            $stmtHeader->execute([$no_penjualan, $tgl_penjualan, $kode_pelanggan, $total, $keterangan]);
 
-            if (!$prod) {
-                throw new Exception("Produk tidak ditemukan!");
+            // 3. Simpan seluruh detail penjualan
+            $stmtDetil = $pdo->prepare(
+                "INSERT INTO detil_penjualan (no_penjualan, no_urut, kode_produk, jumlah, harga, subtotal)
+                 VALUES (?, ?, ?, ?, ?, ?)"
+            );
+            foreach ($detail as $i => $d) {
+                $stmtDetil->execute([
+                    $no_penjualan, $i + 1, $d['kode_produk'], $d['jumlah'], $d['harga'], $d['subtotal'],
+                ]);
             }
 
-            if ($prod['stok'] < $jumlah) {
-                throw new Exception("Stok produk tidak mencukupi! Sisa stok: " . $prod['stok']);
-            }
-
-            $harga_satuan = $prod['harga_jual'];
-            $total_harga  = $jumlah * $harga_satuan;
-
-            // B. Insert ke tabel penjualan (header)
-            $sqlPenjualan = "INSERT INTO penjualan (no_penjualan, tgl_penjualan, kode_pelanggan, total, keterangan) VALUES (?, ?, ?, ?, ?)";
-            $stmt1 = $pdo->prepare($sqlPenjualan);
-            $stmt1->execute([$no_penjualan, $tgl_penjualan, $kode_pelanggan, $total_harga, $keterangan]);
-
-
-            // C. Insert ke tabel detil_penjualan (item barang)
-            // Menyesuaikan kolom harga berdasarkan deteksi sebelumnya
-            $sqlDetil = "INSERT INTO detil_penjualan (no_urut, no_penjualan, kode_produk, jumlah, harga, subtotal) VALUES (?, ?, ?, ?, ?, ?)";
-            $stmt2 = $pdo->prepare($sqlDetil);
-            $stmt2->execute([1, $no_penjualan, $kode_produk, $jumlah, $harga_satuan, $total_harga]);
-
-           
-
-            // D. Update / kurangi stok di tabel produk
-            $sqlStok = "UPDATE produk SET stok = stok - ? WHERE kode_produk = ?";
-            $stmt3 = $pdo->prepare($sqlStok);
-            $stmt3->execute([$jumlah, $kode_produk]);
-
-            // 2. JIKA SEMUA BERHASIL, COMMIT PERUBAHAN KE DATABASE
+            // 4. Semua berhasil -> COMMIT
             $pdo->commit();
 
-            header("Location: laporan_penjualan.php");
+            header("Location: ../laporan/penjualan.php?sukses=" . urlencode($no_penjualan));
             exit;
 
         } catch (Exception $e) {
-            // 3. JIKA ADA ERROR, ROLLBACK SEMUA OPERASI AGAR AMAN
-            $pdo->rollBack();
-            $error = "Transaksi gagal dibatalkan (Rollback): " . $e->getMessage();
+            // 5. Ada yang gagal -> ROLLBACK
+            if ($pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $error = "Transaksi GAGAL dan di-ROLLBACK. Tidak ada data yang tersimpan. Penyebab: " . $e->getMessage();
         }
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Input Transaksi Baru - Backend Logic</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 30px; background-color: #f4f6f9; }
-        .form-container { background: #fff; padding: 20px; border-radius: 6px; max-width: 600px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        .btn-submit { background: #007bff; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; font-weight: bold; }
-        .btn-kembali { background: #6c757d; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px; display: inline-block; margin-left: 10px; }
-        .alert-error { background: #f8d7da; color: #721c24; padding: 10px; margin-bottom: 15px; border-radius: 4px; border: 1px solid #f5c6cb; }
-    </style>
+    <title>Input Transaksi Penjualan</title>
 </head>
 <body>
+<?php require __DIR__ . '/../menu.php'; ?>
 
-    <div class="form-container">
-        <h2>Input Transaksi Penjualan Baru</h2>
-        <p><i>Fitur ini menerapkan manajemen transaksi Database (<code>beginTransaction</code>, <code>commit</code>, & <code>rollBack</code>).</i></p>
+<h2>Input Transaksi Penjualan</h2>
+<p>Satu header penjualan dan minimal dua baris detail disimpan dalam satu transaksi database.</p>
 
-        <?php if ($error): ?>
-            <div class="alert-error"><?= htmlspecialchars($error) ?></div>
-        <?php endif; ?>
+<?php if ($error !== ''): ?>
+    <p><strong>[GAGAL]</strong> <?= h($error) ?></p>
+<?php endif; ?>
 
-        <form action="" method="POST">
-            <div class="form-group">
-                <label>No. Penjualan (Contoh: J20261003):</label>
-                <input type="text" name="no_penjualan" required value="<?= isset($_POST['no_penjualan']) ? htmlspecialchars($_POST['no_penjualan']) : '' ?>">
-            </div>
-            <div class="form-group">
-                <label>Tanggal Penjualan:</label>
-                <input type="date" name="tgl_penjualan" required value="<?= date('Y-m-d') ?>">
-            </div>
-            <div class="form-group">
-                <label>Pilih Pelanggan:</label>
-                <select name="kode_pelanggan" required>
-                    <option value="">-- Pilih Pelanggan --</option>
-                    <?php foreach ($list_pelanggan as $pl): ?>
-                        <option value="<?= htmlspecialchars($pl['kode_pelanggan']) ?>">
-                            <?= htmlspecialchars($pl['nama_pelanggan']) ?> (<?= htmlspecialchars($pl['alamat']) ?>)
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Pilih Produk:</label>
-                <select name="kode_produk" required>
-                    <option value="">-- Pilih Produk --</option>
-                    <?php foreach ($list_produk as $pr): ?>
-                        <option value="<?= htmlspecialchars($pr['kode_produk']) ?>">
-                            <?= htmlspecialchars($pr['nama_produk']) ?> - Rp <?= number_format($pr['harga_jual'], 0, ',', '.') ?> (Stok: <?= $pr['stok'] ?>)
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Jumlah Beli:</label>
-                <input type="number" name="jumlah" min="1" required value="<?= isset($_POST['jumlah']) ? htmlspecialchars($_POST['jumlah']) : 1 ?>">
-            </div>
-            <div class="form-group">
-                <label>Keterangan:</label>
-                <textarea name="keterangan"><?= isset($_POST['keterangan']) ? htmlspecialchars($_POST['keterangan']) : '' ?></textarea>
-            </div>
+<form action="" method="POST">
+    <p><label>No. Penjualan (maks. 15 karakter):</label><br>
+        <input type="text" name="no_penjualan" value="<?= lama('no_penjualan') ?>"></p>
+    <p><label>Tanggal Penjualan:</label><br>
+        <input type="date" name="tgl_penjualan" value="<?= lama('tgl_penjualan', date('Y-m-d')) ?>"></p>
+    <p><label>Pelanggan:</label><br>
+        <select name="kode_pelanggan">
+            <option value="">-- Pilih Pelanggan --</option>
+            <?php foreach ($list_pelanggan as $pl): ?>
+                <option value="<?= h($pl['kode_pelanggan']) ?>" <?= (($_POST['kode_pelanggan'] ?? '') === $pl['kode_pelanggan']) ? 'selected' : '' ?>>
+                    <?= h($pl['nama_pelanggan']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select></p>
+    <p><label>Keterangan:</label><br>
+        <input type="text" name="keterangan" value="<?= lama('keterangan') ?>"></p>
 
-            <button type="submit" name="simpan_transaksi" class="btn-submit">Proses Transaksi & Commit</button>
-            <a href="laporan_penjualan.php" class="btn-kembali">Lihat Laporan</a>
-        </form>
-    </div>
+    <h4>Detail Penjualan (isi minimal 2 baris)</h4>
+
+    <datalist id="daftar-produk">
+        <?php foreach ($list_produk as $pr): ?>
+            <option value="<?= h($pr['kode_produk']) ?>"><?= h($pr['nama_produk']) ?></option>
+        <?php endforeach; ?>
+    </datalist>
+
+    <table border="1" cellpadding="6" cellspacing="0">
+        <thead>
+            <tr><th>No</th><th>Kode Produk</th><th>Jumlah</th><th>Harga (Rp)</th></tr>
+        </thead>
+        <tbody>
+        <?php for ($i = 0; $i < 3; $i++): ?>
+            <tr>
+                <td><?= $i + 1 ?></td>
+                <td><input type="text" name="detail[<?= $i ?>][kode_produk]" list="daftar-produk" value="<?= lamaDetail($i, 'kode_produk') ?>"></td>
+                <td><input type="number" name="detail[<?= $i ?>][jumlah]" min="1" value="<?= lamaDetail($i, 'jumlah') ?>"></td>
+                <td><input type="number" name="detail[<?= $i ?>][harga]" min="0" step="0.01" value="<?= lamaDetail($i, 'harga') ?>"></td>
+            </tr>
+        <?php endfor; ?>
+        </tbody>
+    </table>
+
+    <p><button type="submit">Proses Transaksi</button></p>
+</form>
 
 </body>
 </html>
