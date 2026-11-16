@@ -37,7 +37,8 @@ $list_produk = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </style>
 </head>
 <body>
-
+<body>
+<?php require 'menu.php'; ?>
     <h2>Data Produk (PHP Native & PDO)</h2>
     
     <!-- Tombol Tambah Produk & Form Pencarian -->
