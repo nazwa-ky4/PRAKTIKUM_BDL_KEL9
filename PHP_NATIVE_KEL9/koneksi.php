@@ -2,9 +2,9 @@
 // Konfigurasi koneksi database PostgreSQL menggunakan PDO
 $host = 'localhost';
 $port = '5432';
-$dbname = 'db_penjualan'; // Nama database utama kita
-$user = 'postgres';       // Username default PostgreSQL
-$password = 'nazwa2007'; // ⚠️ Ganti dengan password database PostgreSQL di pgAdmin
+$dbname = 'db_penjualan_test'; 
+$user = 'postgres';     
+$password = 'Rakmalaz611'; 
 
 try {
     // Membuat instance objek PDO untuk PostgreSQL
