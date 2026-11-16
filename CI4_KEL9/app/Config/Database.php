@@ -29,7 +29,7 @@ class Database extends Config
     'hostname' => 'localhost',
     'username' => 'postgres',
     'password' => 'postgres',
-    'database' => 'db_penjualan',
+    'database' => 'db_penjualan_test',
     'DBDriver' => 'Postgre',
     'DBPrefix' => '',
     'pConnect' => false,
