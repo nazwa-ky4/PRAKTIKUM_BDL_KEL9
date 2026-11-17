@@ -1,4 +1,5 @@
 <?php
+// C.2 JOIN penjualan + pelanggan (INNER JOIN: nama pelanggan dari tabel pelanggan).
 require_once __DIR__ . '/../koneksi.php';
 
 try {
@@ -11,6 +12,7 @@ try {
     die("Gagal mengambil data laporan: " . $e->getMessage());
 }
 
+// ?sukses= dikirim tambah_transaksi.php setelah COMMIT.
 $sukses = $_GET['sukses'] ?? '';
 ?>
 <!DOCTYPE html>

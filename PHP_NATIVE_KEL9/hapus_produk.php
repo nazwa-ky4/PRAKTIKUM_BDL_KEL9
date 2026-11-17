@@ -1,4 +1,5 @@
 <?php
+// C.1 DELETE produk lalu kembali ke daftar. Gagal jika produk sudah dipakai transaksi (foreign key).
 require_once 'koneksi.php';
 
 // Periksa apakah parameter id tersedia di URL

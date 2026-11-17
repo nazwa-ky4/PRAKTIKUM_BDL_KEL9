@@ -1,8 +1,10 @@
 <?php
+// C.1 CREATE: form tambah + proses INSERT dalam satu file.
 require_once 'koneksi.php';
 
 $error = '';
 
+// Jalan saat tombol Simpan diklik (POST).
 if (isset($_POST['submit'])) {
     $kode_produk = trim($_POST['kode_produk']);
     $nama_produk = trim($_POST['nama_produk']);
@@ -17,6 +19,7 @@ if (isset($_POST['submit'])) {
         $error = "Semua kolom wajib diisi kecuali deskripsi!";
     } else {
         try {
+            // INSERT langsung dengan placeholder ?; urutan nilai di execute() harus sama.
             $sql = "INSERT INTO produk (kode_produk, nama_produk, satuan, harga_jual, harga_beli, stok, deskripsi) VALUES (?, ?, ?, ?, ?, ?, ?)";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$kode_produk, $nama_produk, $satuan, $harga_jual, $harga_beli, $stok, $deskripsi]);
@@ -25,6 +28,7 @@ if (isset($_POST['submit'])) {
             header("Location: index.php");
             exit;
         } catch (PDOException $e) {
+            // Mis. kode produk sudah ada (primary key).
             $error = "Gagal menyimpan data: " . $e->getMessage();
         }
     }

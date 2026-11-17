@@ -1,3 +1,4 @@
+<?php // View C.3: hasil agregasi per pelanggan ($rows dari rekapPelanggan). ?>
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
 

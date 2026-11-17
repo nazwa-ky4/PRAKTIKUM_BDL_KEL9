@@ -1,6 +1,8 @@
 <?php
+// C.5 Transaksi database: simpan 1 header + banyak detail. COMMIT jika semua sukses, ROLLBACK jika ada yang gagal.
 require_once __DIR__ . '/../koneksi.php';
 
+// Fungsi bantu: h() = htmlspecialchars, lama()/lamaDetail() = isi ulang form.
 function h($teks) { return htmlspecialchars((string) $teks); }
 function lama($nama, $default = '') { return h($_POST[$nama] ?? $default); }
 function lamaDetail($i, $kolom) { return h($_POST['detail'][$i][$kolom] ?? ''); }
@@ -15,6 +17,7 @@ try {
     die("Gagal memuat data referensi: " . $e->getMessage());
 }
 
+// Hanya jalan saat form dikirim.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $no_penjualan   = trim($_POST['no_penjualan'] ?? '');
     $tgl_penjualan  = trim($_POST['tgl_penjualan'] ?? '');
@@ -39,6 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             break;
         }
 
+        // Subtotal & total dihitung di server.
         $subtotal = (int) $jumlah * (float) $harga;
         $total   += $subtotal;
         $detail[] = [
@@ -56,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (strlen($no_penjualan) > 15) {
             $error = "No. penjualan maksimal 15 karakter.";
         } elseif (count($detail) < 2) {
+            // Minimal 2 detail. Dicek sebelum transaksi, jadi ini validasi (bukan rollback).
             $error = "Transaksi harus memiliki minimal dua baris detail.";
         }
     }
@@ -71,6 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "INSERT INTO penjualan (no_penjualan, tgl_penjualan, kode_pelanggan, total, keterangan)
                  VALUES (?, ?, ?, ?, ?)"
             );
+            // Gagal (mis. no_penjualan ganda / angka terlalu besar) -> exception -> catch -> ROLLBACK.
             $stmtHeader->execute([$no_penjualan, $tgl_penjualan, $kode_pelanggan, $total, $keterangan]);
 
             // 3. Simpan seluruh detail penjualan
@@ -78,6 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 "INSERT INTO detil_penjualan (no_penjualan, no_urut, kode_produk, jumlah, harga, subtotal)
                  VALUES (?, ?, ?, ?, ?, ?)"
             );
+            // 1 INSERT per detail. Kode produk tidak ada (mis. P999) -> foreign key error -> ROLLBACK.
             foreach ($detail as $i => $d) {
                 $stmtDetil->execute([
                     $no_penjualan, $i + 1, $d['kode_produk'], $d['jumlah'], $d['harga'], $d['subtotal'],
@@ -93,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             // 5. Ada yang gagal -> ROLLBACK
             if ($pdo->inTransaction()) {
+                // Batalkan semua INSERT sejak beginTransaction().
                 $pdo->rollBack();
             }
             $error = "Transaksi GAGAL dan di-ROLLBACK. Tidak ada data yang tersimpan. Penyebab: " . $e->getMessage();
@@ -112,6 +120,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <h2>Input Transaksi Penjualan</h2>
 <p>Satu header penjualan dan minimal dua baris detail disimpan dalam satu transaksi database.</p>
 
+<?php // Pesan error (validasi atau ROLLBACK). ?>
 <?php if ($error !== ''): ?>
     <p><strong>[GAGAL]</strong> <?= h($error) ?></p>
 <?php endif; ?>
@@ -135,6 +144,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <h4>Detail Penjualan (isi minimal 2 baris)</h4>
 
+    <?php // Saran kode produk; boleh ketik bebas (mis. P999) untuk uji ROLLBACK. ?>
     <datalist id="daftar-produk">
         <?php foreach ($list_produk as $pr): ?>
             <option value="<?= h($pr['kode_produk']) ?>"><?= h($pr['nama_produk']) ?></option>
@@ -146,6 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <tr><th>No</th><th>Kode Produk</th><th>Jumlah</th><th>Harga (Rp)</th></tr>
         </thead>
         <tbody>
+        <?php // 3 baris detail; name=detail[i][kolom] menjadi array $_POST['detail']. ?>
         <?php for ($i = 0; $i < 3; $i++): ?>
             <tr>
                 <td><?= $i + 1 ?></td>

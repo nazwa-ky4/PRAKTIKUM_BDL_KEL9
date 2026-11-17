@@ -1,4 +1,5 @@
 <?php
+// C.1 UPDATE: ambil data lama, tampilkan di form, simpan dengan UPDATE.
 require_once 'koneksi.php';
 
 $error = '';
@@ -34,6 +35,7 @@ if (isset($_POST['update'])) {
         $error = "Semua kolom wajib diisi kecuali deskripsi!";
     } else {
         try {
+            // WHERE wajib agar hanya 1 produk yang berubah.
             $sql = "UPDATE produk SET nama_produk = ?, satuan = ?, harga_jual = ?, harga_beli = ?, stok = ?, deskripsi = ? WHERE kode_produk = ?";
             $stmt = $pdo->prepare($sql);
             $stmt->execute([$nama_produk, $satuan, $harga_jual, $harga_beli, $stok, $deskripsi, $kode_produk]);
@@ -63,6 +65,7 @@ if (isset($_POST['update'])) {
 
 <form action="" method="POST">
     <p><label>Kode Produk (Tidak dapat diubah):</label><br>
+        <?php // Kode (primary key) tidak bisa diubah. ?>
         <input type="text" value="<?= htmlspecialchars($produk['kode_produk']) ?>" disabled></p>
     <p><label>Nama Produk:</label><br>
         <input type="text" name="nama_produk" required value="<?= htmlspecialchars($produk['nama_produk']) ?>"></p>

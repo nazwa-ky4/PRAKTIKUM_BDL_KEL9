@@ -1,3 +1,4 @@
+<?php // View C.2: hasil JOIN penjualan + pelanggan ($rows dari daftarPenjualan). ?>
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
 

@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\ProdukModel;
 use CodeIgniter\Database\Exceptions\DatabaseException;
 
+// CRUD Produk (C.1): terima request, validasi, panggil Model, pilih View/redirect.
 class ProdukController extends BaseController
 {
     protected ProdukModel $produkModel;
@@ -25,6 +26,7 @@ class ProdukController extends BaseController
             'stok'        => 'required|integer|greater_than_equal_to[0]',
         ];
 
+        // Kode produk (primary key) hanya divalidasi saat tambah; is_unique = tidak boleh kembar.
         if ($untukTambah) {
             $rules['kode_produk'] = 'required|max_length[10]|is_unique[produk.kode_produk]';
         }
@@ -35,7 +37,9 @@ class ProdukController extends BaseController
     // Tampil + cari
     public function index()
     {
+        // READ + cari: ambil ?keyword= dari URL.
         $keyword = $this->request->getGet('keyword');
+        // SELECT ... [ILIKE keyword] ORDER BY kode_produk (dijalankan saat findAll()).
         $produk = $this->produkModel
             ->cariProduk($keyword)
             ->orderBy('kode_produk', 'ASC')
@@ -57,11 +61,13 @@ class ProdukController extends BaseController
     // Simpan produk baru
     public function store()
     {
+        // Validasi gagal -> kembali ke form + isian lama + pesan error.
         if (! $this->validate($this->rules(true))) {
             return redirect()->back()->withInput()
                 ->with('errors', $this->validator->getErrors());
         }
 
+        // CREATE: Model membuat INSERT otomatis (nilai di-bind, aman dari SQL injection).
         $this->produkModel->insert([
             'kode_produk' => trim($this->request->getPost('kode_produk')),
             'nama_produk' => trim($this->request->getPost('nama_produk')),
@@ -72,12 +78,14 @@ class ProdukController extends BaseController
             'deskripsi'   => trim($this->request->getPost('deskripsi') ?? ''),
         ]);
 
+        // Flashdata 'pesan' tampil sekali di layout.
         return redirect()->to('/produk')->with('pesan', 'Data produk berhasil ditambahkan.');
     }
 
     // Form edit
     public function edit($id)
     {
+        // find = SELECT berdasarkan primary key.
         $produk = $this->produkModel->find($id);
 
         if (! $produk) {
@@ -95,6 +103,7 @@ class ProdukController extends BaseController
                 ->with('errors', $this->validator->getErrors());
         }
 
+        // UPDATE ... WHERE kode_produk = $id (kode tidak ikut diubah).
         $this->produkModel->update($id, [
             'nama_produk' => trim($this->request->getPost('nama_produk')),
             'satuan'      => trim($this->request->getPost('satuan')),
@@ -111,6 +120,7 @@ class ProdukController extends BaseController
     public function delete($id)
     {
         try {
+            // DELETE; jika produk dipakai transaksi, foreign key menolak -> DatabaseException.
             $this->produkModel->delete($id);
             return redirect()->to('/produk')->with('pesan', 'Data produk berhasil dihapus.');
         } catch (DatabaseException $e) {

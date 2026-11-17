@@ -4,6 +4,7 @@ namespace App\Models;
 
 use CodeIgniter\Model;
 
+// Model penjualan + detil_penjualan. Berisi transaksi database (C.5).
 class PenjualanModel extends Model
 {
     protected $table            = 'penjualan';
@@ -29,6 +30,7 @@ class PenjualanModel extends Model
         $db = $this->db;
 
         // 1. Mulai transaksi
+        // Mode manual: transBegin -> transCommit / transRollback.
         $db->transBegin();
 
         try {
@@ -36,6 +38,7 @@ class PenjualanModel extends Model
             $this->cekHasil($db->table('penjualan')->insert($header));
 
             // 3. Simpan seluruh detail penjualan
+            // 1 INSERT per detail. Kode produk tidak ada (mis. P999) -> foreign key error -> catch -> ROLLBACK.
             foreach ($detail as $i => $d) {
                 $this->cekHasil($db->table('detil_penjualan')->insert([
                     'no_penjualan' => $header['no_penjualan'],
@@ -51,6 +54,7 @@ class PenjualanModel extends Model
             $db->transCommit();
         } catch (\Throwable $e) {
             // 5. Ada yang gagal -> ROLLBACK, lalu teruskan error
+            // Batalkan semua INSERT (header + detail yang sempat masuk).
             $db->transRollback();
             throw $e;
         }
