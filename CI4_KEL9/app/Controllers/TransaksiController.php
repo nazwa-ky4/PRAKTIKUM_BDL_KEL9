@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\PenjualanModel;
 use App\Models\ProdukModel;
 
+// Fitur C.5. Controller: validasi & hitung total. Model (simpanTransaksi): menjalankan transaksi database.
 class TransaksiController extends BaseController
 {
     protected PenjualanModel $penjualan;
@@ -40,6 +41,7 @@ class TransaksiController extends BaseController
         $detail = [];
         $total  = 0;
 
+        // Ambil baris detail dari form (baris kosong dilewati, baris salah ditolak).
         foreach ($this->request->getPost('detail') ?? [] as $b) {
             $kode   = trim($b['kode_produk'] ?? '');
             $jumlah = trim($b['jumlah'] ?? '');
@@ -55,6 +57,7 @@ class TransaksiController extends BaseController
                 ]);
             }
 
+            // Subtotal & total dihitung di server.
             $subtotal = (int) $jumlah * (float) $harga;
             $total   += $subtotal;
             $detail[] = [
@@ -65,6 +68,7 @@ class TransaksiController extends BaseController
             ];
         }
 
+        // Minimal 2 detail. Dicek sebelum transaksi, jadi ini validasi (bukan rollback).
         if (count($detail) < 2) {
             return redirect()->back()->withInput()
                 ->with('errors', ['Transaksi harus memiliki minimal dua baris detail.']);
@@ -79,12 +83,15 @@ class TransaksiController extends BaseController
         ];
 
         try {
+            // Simpan header + detail dalam 1 transaksi. Gagal -> Model ROLLBACK lalu melempar exception.
             $this->penjualan->simpanTransaksi($header, $detail);
         } catch (\Throwable $e) {
+            // Gagal: tampilkan penyebab dari PostgreSQL.
             return redirect()->back()->withInput()->with('galat',
                 'Transaksi GAGAL dan di-ROLLBACK. Tidak ada data yang tersimpan. Penyebab: ' . $e->getMessage());
         }
 
+        // Berhasil (sudah COMMIT).
         return redirect()->to('/laporan/penjualan')
             ->with('pesan', 'Transaksi ' . $header['no_penjualan'] . ' berhasil disimpan (COMMIT).');
     }

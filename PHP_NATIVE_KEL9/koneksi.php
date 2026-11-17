@@ -1,4 +1,5 @@
 <?php
+// koneksi.php: koneksi PDO ke PostgreSQL. Di-include semua halaman (menyediakan $pdo).
 // Konfigurasi koneksi database PostgreSQL menggunakan PDO
 $host = 'localhost';
 $port = '5432';
@@ -11,6 +12,7 @@ try {
     $pdo = new PDO("pgsql:host=$host;port=$port;dbname=$dbname", $user, $password);
     
     // Mengatur mode error PDO menjadi Exception agar error mudah dideteksi
+    // Wajib: tanpa ini error tidak menjadi exception, sehingga catch/ROLLBACK tidak jalan.
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     
     // echo "Koneksi berhasil!"; // Uncomment baris ini jika ingin mengetes koneksi

@@ -1,3 +1,4 @@
+<?php // Form transaksi: header (penjualan) + 3 baris detail (detil_penjualan) -> POST /transaksi/simpan. ?>
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
 
@@ -24,6 +25,7 @@
 
     <h4>Detail Penjualan (isi minimal 2 baris)</h4>
 
+    <?php // Saran kode produk; boleh ketik bebas (mis. P999) untuk uji ROLLBACK. ?>
     <datalist id="daftar-produk">
         <?php foreach ($produk as $pr): ?>
             <option value="<?= esc($pr['kode_produk']) ?>"><?= esc($pr['nama_produk']) ?></option>
@@ -35,6 +37,7 @@
             <tr><th>No</th><th>Kode Produk</th><th>Jumlah</th><th>Harga (Rp)</th></tr>
         </thead>
         <tbody>
+        <?php // 3 baris detail; name=detail[i][kolom] menjadi array di Controller, baris kosong dilewati. ?>
         <?php for ($i = 0; $i < 3; $i++): ?>
             <tr>
                 <td><?= $i + 1 ?></td>

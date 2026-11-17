@@ -1,3 +1,4 @@
+<?php // Layout induk: CSS, menu, pesan, dan tempat isi halaman. esc() = cegah XSS. ?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -53,6 +54,7 @@
         <a href="/transaksi/tambah">Transaksi Baru</a>
     </nav>
 
+    <?php // Pesan sekali tampil dari Controller: pesan (sukses), galat (error/ROLLBACK), errors (validasi). ?>
     <?php if (session()->getFlashdata('pesan')): ?>
         <div class="sukses"><?= esc(session()->getFlashdata('pesan')) ?></div>
     <?php endif; ?>
@@ -67,6 +69,7 @@
         </div>
     <?php endif; ?>
 
+    <?php // Isi tiap halaman disisipkan di sini. ?>
     <?= $this->renderSection('content') ?>
 </body>
 </html>

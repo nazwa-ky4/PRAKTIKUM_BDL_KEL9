@@ -1,9 +1,11 @@
+<?php // Form tambah -> POST /produk/store. old() = isi ulang form jika validasi gagal. ?>
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
 
 <h2>Tambah Produk Baru</h2>
 
 <form action="/produk/store" method="post">
+    <?php // Token CSRF (belum diverifikasi karena filter csrf belum aktif). ?>
     <?= csrf_field() ?>
     <p><label>Kode Produk (Contoh: P006):</label><br>
         <input type="text" name="kode_produk" value="<?= esc(old('kode_produk')) ?>"></p>

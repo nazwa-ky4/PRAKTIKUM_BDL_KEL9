@@ -1,3 +1,4 @@
+<?php // View C.4: laporan per produk ($rows dari rekapProduk). ?>
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
 

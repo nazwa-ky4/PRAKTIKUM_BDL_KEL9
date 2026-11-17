@@ -1,4 +1,5 @@
 <?php
+// C.1 READ + cari produk. Pada PHP Native, query, logika, dan tampilan ada dalam satu file.
 // Memanggil file koneksi database
 require_once 'koneksi.php';
 
@@ -7,12 +8,14 @@ $keyword = isset($_GET['cari']) ? trim($_GET['cari']) : '';
 
 if ($keyword !== '') {
     // ILIKE: pencarian tidak case-sensitive (khusus PostgreSQL)
+    // prepare + ? = prepared statement (aman dari SQL injection).
     $stmt = $pdo->prepare("SELECT * FROM produk WHERE nama_produk ILIKE ? ORDER BY kode_produk ASC");
     $stmt->execute(["%$keyword%"]);
 } else {
     $stmt = $pdo->query("SELECT * FROM produk ORDER BY kode_produk ASC");
 }
 
+// Ambil semua baris sebagai array asosiatif.
 $list_produk = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
@@ -27,6 +30,7 @@ $list_produk = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <h2>Data Produk — PHP Native (PDO)</h2>
 
 <form method="GET" action="" class="baris-aksi">
+    <?php // htmlspecialchars = cegah XSS. ?>
     <input type="text" name="cari" placeholder="Cari nama produk..." value="<?= htmlspecialchars($keyword) ?>">
     <button type="submit">Cari</button>
     <a href="tambah_produk.php" class="btn btn-tambah">+ Tambah Produk</a>
@@ -54,10 +58,12 @@ $list_produk = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <td><?= htmlspecialchars($p['kode_produk']) ?></td>
             <td><?= htmlspecialchars($p['nama_produk']) ?></td>
             <td><?= htmlspecialchars($p['satuan']) ?></td>
+            <?php // number_format = format Rupiah. ?>
             <td>Rp <?= number_format($p['harga_jual'], 0, ',', '.') ?></td>
             <td>Rp <?= number_format($p['harga_beli'], 0, ',', '.') ?></td>
             <td><?= htmlspecialchars($p['stok']) ?></td>
             <td>
+                <?php // Kode produk dikirim lewat URL (?id=). ?>
                 <a href="edit_produk.php?id=<?= htmlspecialchars($p['kode_produk']) ?>" class="btn btn-ubah">Ubah</a>
                 <a href="hapus_produk.php?id=<?= htmlspecialchars($p['kode_produk']) ?>" class="btn btn-hapus" onclick="return confirm('Yakin ingin menghapus produk ini?')">Hapus</a>
             </td>

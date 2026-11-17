@@ -1,8 +1,10 @@
+<?php // View daftar produk + pencarian. Data: $produk, $keyword. ?>
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
 
 <h2>Data Produk — CodeIgniter 4</h2>
 
+<?php // Form cari (GET -> ?keyword=). ?>
 <form action="/produk" method="get" class="baris-aksi">
     <input type="text" name="keyword" value="<?= esc($keyword ?? '') ?>" placeholder="Cari nama produk...">
     <button type="submit">Cari</button>
@@ -31,10 +33,12 @@
             <td><?= esc($p['kode_produk']) ?></td>
             <td><?= esc($p['nama_produk']) ?></td>
             <td><?= esc($p['satuan']) ?></td>
+            <?php // number_format = format Rupiah. ?>
             <td>Rp <?= number_format($p['harga_jual'], 0, ',', '.') ?></td>
             <td>Rp <?= number_format($p['harga_beli'], 0, ',', '.') ?></td>
             <td><?= esc($p['stok']) ?></td>
             <td>
+                <?php // Ubah -> edit(), Hapus -> delete() (ada konfirmasi). ?>
                 <a href="/produk/edit/<?= esc($p['kode_produk']) ?>" class="btn btn-ubah">Ubah</a>
                 <a href="/produk/delete/<?= esc($p['kode_produk']) ?>" class="btn btn-hapus" onclick="return confirm('Yakin ingin menghapus produk ini?')">Hapus</a>
             </td>

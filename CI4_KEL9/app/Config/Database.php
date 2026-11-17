@@ -24,11 +24,13 @@ class Database extends Config
      *
      * @var array<string, mixed>
      */
+    // Koneksi PostgreSQL untuk semua Model. DBDebug true = error database jadi exception (dipakai untuk ROLLBACK).
     public array $default = [
     'DSN'      => '',
     'hostname' => 'localhost',
     'username' => 'postgres',
     'password' => 'postgres',
+    // Database pengujian.
     'database' => 'db_penjualan_test',
     'DBDriver' => 'Postgre',
     'DBPrefix' => '',

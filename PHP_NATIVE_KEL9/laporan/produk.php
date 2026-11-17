@@ -1,4 +1,5 @@
 <?php
+// C.4 Laporan per produk: SUM qty & nilai. LEFT JOIN = produk yang belum terjual tetap tampil (0).
 require_once __DIR__ . '/../koneksi.php';
 
 try {

@@ -1,4 +1,6 @@
 <?php
+// C.3 Agregasi per pelanggan: COUNT, SUM, GROUP BY.
+// LEFT JOIN = pelanggan tanpa transaksi tetap tampil; COALESCE = NULL jadi 0.
 require_once __DIR__ . '/../koneksi.php';
 
 try {

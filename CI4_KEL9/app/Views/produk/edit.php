@@ -1,3 +1,4 @@
+<?php // Form ubah -> POST /produk/update/{kode}. old(field, nilai DB) = isian lama atau data dari database. ?>
 <?= $this->extend('layouts/main') ?>
 <?= $this->section('content') ?>
 
@@ -6,6 +7,7 @@
 <form action="/produk/update/<?= esc($produk['kode_produk']) ?>" method="post">
     <?= csrf_field() ?>
     <p><label>Kode Produk (Tidak dapat diubah):</label><br>
+        <?php // Kode (primary key) tidak bisa diubah. ?>
         <input type="text" value="<?= esc($produk['kode_produk']) ?>" disabled></p>
     <p><label>Nama Produk:</label><br>
         <input type="text" name="nama_produk" value="<?= esc(old('nama_produk', $produk['nama_produk'])) ?>"></p>
